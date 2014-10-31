@@ -1,0 +1,3 @@
+#!/bin/sh
+# Archive a current xlog.
+psql -c 'select pg_switch_xlog()' postgres

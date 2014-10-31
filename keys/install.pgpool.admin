@@ -1,0 +1,10 @@
+apt-get install -y apache2 libapache2-mod-php5 php5 php5-pgsql
+mkdir   /var/www/html
+cd  /var/www/html
+wget http://www.pgpool.net/download.php?f=pgpoolAdmin-3.2.0.tar.gz
+mv download.php?f=pgpoolAdmin-3.2.0.tar.gz pgpoolAdmin-3.2.0.tar.gz
+tar -xvf pgpoolAdmin-3.2.0.tar.gz
+mv pgpoolAdmin-3.2.0 admin-tool
+chown -R www-data:www-data admin-tool/
+chown www-data /etc/pgpool2/pgpool.conf
+chown www-data\: /etc/pgpool2/pcp.conf
