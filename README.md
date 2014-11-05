@@ -54,3 +54,10 @@ c2fc3b670868        postmart/psql-9.3:latest   "/bin/bash"         2 hours ago  
 ```
 
 So we have 2 pgpool nodes to avoid SPOF. This means that our application container will access database using virtual IP. Check `delegate_ip` file to see default virtual IP. Change this IP to any you want.
+
+
+#### Dockerfile
+There is ruby installed in the docker image, as I am locally testing with rails app. Feel free to remove ruby from the image to free some space.
+
+#### Help
+I had no time to add any kind of error checks :) So feel free to improve any single line :)
