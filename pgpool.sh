@@ -10,6 +10,10 @@ PGPOOL1_IP=""
 PGPOOL2_IP=""
 MERLIN_IP=""
 
+for dir in ${nodes[*]}; do
+mkdir -p keys/$dir
+done
+
 # installing postgresql server on all machines, and generate ssh keys
 echo -e "\e[32mstarting docker containers"
 echo -e "\e[0m"
