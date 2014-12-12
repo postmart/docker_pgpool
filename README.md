@@ -1,6 +1,9 @@
 Learning Docker http://docker.io/ by creating a pgpool cluster
 ==================
 
+####Requirements
+- docker that supports `exec` command ('exec' is available starting from docker version 1.3)
+
 ###Pgpool2 cluster + Postgresql Streaming Replication Test
 To understand setup architecture, please take a look at:
 - http://www.pgpool.net/pgpool-web/contrib_docs/watchdog/en.html
@@ -11,7 +14,7 @@ This simple scripts will help you to learn more about docker and pgpool clusteri
 ####Initial setup
 
 1. To create environment run script `pgpool.sh`. It will launch 6 docker containers and prepare all the config files: 
- - the application (named: merlin) 
+ - the application (app) 
  [you can deploy any app in this container to access pgpool cluster]
  - master (postgresql) 
  - slave1 (postgresql)
@@ -46,7 +49,7 @@ This means that pool is up and functioning, and all the servers in pool are onli
 CONTAINER ID        IMAGE                      COMMAND             CREATED             STATUS              PORTS                       NAMES
 1014dee46ebc        postmart/psql-9.3:latest   "/bin/bash"         2 hours ago         Up 2 hours                                      pgpool-1
 ba2edb256668        postmart/psql-9.3:latest   "/bin/bash"         2 hours ago         Up 2 hours                                      pgpool-2
-ec397860af5a        postmart/psql-9.3:latest   "/bin/bash"         2 hours ago         Up 2 hours          10.255.252.185:88->80/tcp   merlin
+ec397860af5a        postmart/psql-9.3:latest   "/bin/bash"         2 hours ago         Up 2 hours                                      app
 3d5ad6d50d8f        postmart/psql-9.3:latest   "/bin/bash"         2 hours ago         Up 2 hours                                      slave2
 c2fc3b670868        postmart/psql-9.3:latest   "/bin/bash"         2 hours ago         Up 2 hours                                      slave1
 13cbdbc1d698        postmart/psql-9.3:latest   "/bin/bash"         2 hours ago         Up 2 hours                                      master
@@ -65,5 +68,3 @@ So we have 2 pgpool nodes to avoid SPOF. This means that our application contain
 #### Dockerfile
 There is ruby installed in the docker image, as I am locally testing with rails app. Feel free to remove ruby from the image to free some space.
 
-#### Help
-I had no time to add any kind of error checks :) So feel free to improve any single line :)

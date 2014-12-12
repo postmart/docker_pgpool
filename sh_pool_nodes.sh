@@ -1,1 +1,2 @@
-docker exec merlin bash -c "sudo -u postgres psql -h 172.17.1.50 -p 9999 -c 'show pool_nodes;'"
+DELEGATE_IP=$(cat delegate_ip)
+docker exec app bash -c "sudo -u postgres psql -h $DELEGATE_IP -p 9999 -c 'show pool_nodes;'"
