@@ -1,30 +1,64 @@
+#!/bin/bash
+
 VOLUME=$PWD/keys:/keys
-IP=$(/sbin/ifconfig eth0 | grep "inet addr" | awk -F: '{print $2}' | awk '{print $1}')
+#IP=$(/sbin/ifconfig eth0 | grep "inet addr" | awk -F: '{print $2}' | awk '{print $1}')
 pg_data_dir=/var/lib/postgresql/9.3/main
-nodes=(master slave1 slave2 pgpool-1 pgpool-2)
 DELEGATE_IP=$(cat delegate_ip)
 MASTER_IP=""
 SLAVE1_IP=""
 SLAVE2_IP=""
 PGPOOL1_IP=""
 PGPOOL2_IP=""
-MERLIN_IP=""
+APP_IP=""
 
-for dir in ${nodes[*]}; do
-mkdir -p keys/$dir
-done
+echo -e "\e[32mChecking docker version"
+MIN_VER=1.3
+VER=$(docker -v | awk '{print $3}' | cut -d, -f1 |cut -d. -f1,2)
+if [[ 1 -eq `echo "${VER} < ${MIN_VER}" | bc ` ]] ; then
+    echo -e "\e[31mYour docker version is lower than $MIN_VER"
+    echo -e "\e[32mCurrent docker version: "$VER
+    echo -e "\e[32mPlease upgrade your docker before running this script"
+    echo -e "\e[34mExiting"
+    echo -e "\e[0m"
+    exit 0
+else
+   echo -e "\e[32mYou docker version is OK"
+fi
+
+# check whether docker is installed and supports exec
+if  docker exec |grep  Error  2>/dev/null 1>&2 ; then
+    echo "Please check your docker version."
+    echo "I should be at least version 1.3"
+    echo -e "\e[0m"
+    exit 1
+fi 
+# check whether docker image is already available
+echo -e "\e[32mCheck whether docker image locally available"
+echo -e "\e[0m"
+if ! docker images | grep postmart/psql-9.3 ; then
+    echo "Image is not available, need to pull first"
+    docker pull postmart/psql-9.3:latest
+        if [[ $? == 0 ]]; then
+            for dir in ${nodes[*]}; do
+            mkdir -p keys/$dir
+            done
+        else
+            print -e "\e[33Something went wrong"
+            exit 1
+        fi
+fi
 
 # installing postgresql server on all machines, and generate ssh keys
 echo -e "\e[32mstarting docker containers"
 echo -e "\e[0m"
-for node in ${nodes[*]}; do
+for node in `cat nodes`; do
 docker run --name $node --hostname=$node --privileged=true -t -v $VOLUME postmart/psql-9.3:latest & 
 done
 
-docker run -p $IP:88:80 --name merlin --hostname="merlin" --privileged=true -t -v $PWD/keys:/keys postmart/psql-9.3:latest &
+#docker run -p $IP:88:80 --name merlin --hostname="merlin" --privileged=true -t -v $PWD/keys:/keys postmart/psql-9.3:latest &
 sleep 2
 
-while [[ -z "$MASTER_IP" ]] || [[  -z "$SLAVE1_IP" ]] || [[ -z "$SLAVE2_IP" ]] || [[ -z "$PGPOOL1_IP" ]] || [[ -z "$PGPOOL2_IP" ]] || [[ -z "$MERLIN_IP" ]] ; do 
+while [[ -z "$MASTER_IP" ]] || [[  -z "$SLAVE1_IP" ]] || [[ -z "$SLAVE2_IP" ]] || [[ -z "$PGPOOL1_IP" ]] || [[ -z "$PGPOOL2_IP" ]] || [[ -z "$APP_IP" ]] ; do 
 MASTER_IP=$(docker inspect master | grep IPAddress | awk '{print $2}' | tr -d '",\n')
 echo ""
 echo "master: " $MASTER_IP
@@ -36,18 +70,13 @@ PGPOOL1_IP=$(docker inspect pgpool-1 | grep IPAddress | awk '{print $2}' | tr -d
 echo "pgpool-1: " $PGPOOL1_IP
 PGPOOL2_IP=$(docker inspect pgpool-2 | grep IPAddress | awk '{print $2}' | tr -d '",\n')
 echo "pgpool-2: " $PGPOOL2_IP
-MERLIN_IP=$(docker inspect merlin | grep IPAddress | awk '{print $2}' | tr -d '",\n')
+APP_IP=$(docker inspect app | grep IPAddress | awk '{print $2}' | tr -d '",\n')
 
 done
 
 echo "................................"
 echo -e "\e[0m"
 echo "................................"
-#echo "Install Postgresql and openssh"
-#docker exec master apt-get -y install postgresql-9.3 postgresql-server-dev-9.3 openssh-server
-#docker exec pgpool-2 apt-get -y install postgresql-9.3 postgresql-server-dev-9.3 openssh-server
-#docker exec slave1 apt-get -y install postgresql-9.3 postgresql-server-dev-9.3 openssh-server
-#docker exec slave2 apt-get -y install postgresql-9.3 postgresql-server-dev-9.3 openssh-server
 echo "................................"
 echo -e "\e[32mStarting ssh"
 echo -e "\e[0m"
@@ -65,9 +94,6 @@ docker exec slave2 /etc/init.d/postgresql stop
 
 echo -e "\e[32mGenerating ssh keys"
 echo -e "\e[0m"
-#docker exec master bash -c "sudo -u postgres ssh-keygen -trsa -b 4096"
-#docker exec slave1 bash -c "sudo -u postgres ssh-keygen -trsa -b 4096"
-#docker exec slave2 bash -c "sudo -u postgres ssh-keygen -trsa -b 4096"
 
 for node in ${nodes[*]}; do
 docker exec $node bash -c "sudo -u postgres ssh-keygen  -b 2048 -t rsa -f /var/lib/postgresql/.ssh/id_rsa -q " ;
@@ -220,15 +246,13 @@ docker exec pgpool-2 bash -c "echo host all all $MASTER_IP/32 trust >> /etc/post
 docker exec pgpool-2 bash -c "echo host all all $SLAVE1_IP/32 trust >> /etc/postgresql/9.3/main/pg_hba.conf"
 docker exec pgpool-2 bash -c "echo host all all $SLAVE2_IP/32 trust >> /etc/postgresql/9.3/main/pg_hba.conf"
 docker exec pgpool-2 bash -c "echo host all all $PGPOOL1_IP/32 trust >> /etc/postgresql/9.3/main/pg_hba.conf"
-docker exec pgpool-2 bash -c "echo host all all $MERLIN_IP/32 trust >> /etc/postgresql/9.3/main/pg_hba.conf"
+docker exec pgpool-2 bash -c "echo host all all $APP_IP/32 trust >> /etc/postgresql/9.3/main/pg_hba.conf"
 
 docker exec pgpool-1 bash -c "echo host all all $MASTER_IP/32 trust >> /etc/postgresql/9.3/main/pg_hba.conf"
 docker exec pgpool-1 bash -c "echo host all all $SLAVE1_IP/32 trust >> /etc/postgresql/9.3/main/pg_hba.conf"
 docker exec pgpool-1 bash -c "echo host all all $SLAVE2_IP/32 trust >> /etc/postgresql/9.3/main/pg_hba.conf"
 docker exec pgpool-1 bash -c "echo host all all $PGPOOL2_IP/32 trust >> /etc/postgresql/9.3/main/pg_hba.conf"
-docker exec pgpool-1 bash -c "echo host all all $MERLIN_IP/32 trust >> /etc/postgresql/9.3/main/pg_hba.conf"
-
-#docker exec pgpool-2 bash -c "cp /etc/postgresql/9.3/main/pg_hba.conf /etc/pgpool2/pool_hba.conf"
+docker exec pgpool-1 bash -c "echo host all all $APP_IP/32 trust >> /etc/postgresql/9.3/main/pg_hba.conf"
 
 echo -e "\e[95mcreating user database on master"
 echo -e "\e[0m"
@@ -267,9 +291,7 @@ docker exec pgpool-1 bash -c "/keys/pgpool-1_pgpool.sh"
 docker exec pgpool-1 bash -c "mkdir -p /var/lib/postgresql/bin"
 docker exec pgpool-1 bash -c "cp /keys/pgpool-2_failover.sh /var/lib/postgresql/bin/failover.sh"
 
-#docker exec pgpool-2 bash -c "/keys/install.pgpool.admin"
 sleep 1
-#docker exec pgpool-2 bash -c "/etc/init.d/apache2 start"
 docker exec master bash -c "cp /keys/pgpool-recovery.so /usr/lib/postgresql/9.3/lib/pgpool-recovery.so"
 docker exec slave1 bash -c "cp /keys/pgpool-recovery.so /usr/lib/postgresql/9.3/lib/pgpool-recovery.so"
 docker exec slave2 bash -c "cp /keys/pgpool-recovery.so /usr/lib/postgresql/9.3/lib/pgpool-recovery.so"
@@ -288,7 +310,6 @@ docker exec slave2 bash -c "cp /keys/pgpool-recovery $pg_data_dir/pgpool-recover
 
 echo -e "\e[32mStarting pool on pgpool-2"
 echo -e "\e[0m"
-#docker exec pgpool-2 bash -c "ifconfig eth0:1 $DELEGATE_IP netmask 255.255.0.0"
 
 docker exec pgpool-2 bash -c "/keys/pgpool-2_start.sh"
 sleep 3
