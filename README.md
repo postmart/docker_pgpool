@@ -8,6 +8,7 @@ Learning Docker http://docker.io/ by creating a pgpool cluster
 To understand setup architecture, please take a look at:
 - http://www.pgpool.net/pgpool-web/contrib_docs/watchdog/en.html
 - http://www.pgpool.net/docs/pgpool-II-3.2.0/wd-en.html
+- https://github.com/faja/howtos/blob/master/sql/postgresql/README.md
 
 This simple scripts will help you to learn more about docker and pgpool clustering.
 
