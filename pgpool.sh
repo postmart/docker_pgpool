@@ -104,8 +104,8 @@ docker exec $node bash -c "mkdir -p /var/lib/postgresql/.ssh/" ;
 done
 
 for node in ${nodes[*]}; do
-docker exec $node bash -c "cd /keys/ && find . -type f -name id_rsa.pub -exec cat {} \; >> /root/.ssh/authorized_keys \
->> /var/lib/postgresql/.ssh/authorized_keys"
+docker exec $node bash -c "cd /keys/ && find . -type f -name id_rsa.pub -exec cat {} \; | tee /root/.ssh/authorized_keys \
+ /var/lib/postgresql/.ssh/authorized_keys"
 done
 
 echo "................................"
@@ -270,6 +270,6 @@ docker exec pgpool-2 bash -c "/keys/pgpool-2_start.sh"
 sleep 2.5
 docker exec pgpool-1 bash -c "/keys/pgpool-2_start.sh"
 
-echo -e "\e[32mVerify connecetion from the app container to delegared IP pgpool"
+echo -e "\e[32mVerify connection from the app container to delegared IP pgpool"
 echo -e "\e[0m"
 docker exec pgpool-2 bash -c "sudo -u postgres psql -h $DELEGATE_IP -p 9999 -l"
