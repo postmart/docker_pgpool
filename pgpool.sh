@@ -210,12 +210,12 @@ docker exec pgpool-1 bash -c "echo host all all $SLAVE2_IP/32 trust >> /etc/post
 docker exec pgpool-1 bash -c "echo host all all $PGPOOL2_IP/32 trust >> /etc/postgresql/9.3/main/pg_hba.conf"
 docker exec pgpool-1 bash -c "echo host all all $APP_IP/32 trust >> /etc/postgresql/9.3/main/pg_hba.conf"
 
-#echo -e "\e[95mcreating user database on master"
-#echo -e "\e[0m"
+echo -e "\e[95mcreating user database on master"
+echo -e "\e[0m"
 docker exec master /etc/init.d/postgresql start
 #docker exec slave1 /etc/init.d/postgresql start
 #docker exec slave2 /etc/init.d/postgresql start
-#docker exec master bash -c "sudo -u postgres psql --file=/keys/create_user_master.sql "
+docker exec master bash -c "sudo -u postgres psql --file=/keys/create_user_master.sql "
 
 echo -e "\e[32mCreating base backup  on master"
 echo -e "\e[0m"
@@ -266,12 +266,10 @@ docker exec slave2 bash -c "cp /keys/pgpool-recovery $pg_data_dir/pgpool-recover
 
 echo -e "\e[32mStarting pool on pgpool-2"
 echo -e "\e[0m"
-
 docker exec pgpool-2 bash -c "/keys/pgpool-2_start.sh"
-sleep 3
+sleep 2.5
 docker exec pgpool-1 bash -c "/keys/pgpool-2_start.sh"
 
-echo -e "\e[32mExecute psql -f pgpool-recovery.sql template1"
+echo -e "\e[32mVerify connecetion from the app container to delegared IP pgpool"
 echo -e "\e[0m"
-docker exec pgpool-2 bash -c "sudo -u postgres psql -h $DELEGATE_IP -p 9999 -f /keys/pgpool-recovery.sql template1"
-echo "................................"
+docker exec pgpool-2 bash -c "sudo -u postgres psql -h $DELEGATE_IP -p 9999 -l"
